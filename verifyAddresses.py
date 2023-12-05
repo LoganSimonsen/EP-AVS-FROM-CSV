@@ -1,5 +1,6 @@
 import csv
 import easypost
+import json
 
 # Set your EasyPost API key
 easypost.api_key = 'YOUR_EASYPOST_API_KEY'
@@ -17,12 +18,42 @@ def verify_address(name, street1, street2, city, state, zip_code, country):
 
     return address
 
+def process_result(result):
+    # Process the result and return a dictionary
+    return {
+        "id": result.id,
+        "object": result.object,
+        "created_at": result.created_at,
+        "updated_at": result.updated_at,
+        "name": result.name,
+        "company": result.company,
+        "street1": result.street1,
+        "street2": result.street2,
+        "city": result.city,
+        "state": result.state,
+        "zip": result.zip,
+        "country": result.country,
+        "phone": result.phone,
+        "email": result.email,
+        "mode": result.mode,
+        "carrier_facility": result.carrier_facility,
+        "residential": result.residential,
+        "federal_tax_id": result.federal_tax_id,
+        "state_tax_id": result.state_tax_id,
+        "verifications": result.verifications.to_dict() if result.verifications else None
+    }
+
 def main():
     # Replace 'your_file.csv' with the path to your CSV file
-    csv_file_path = 'your_file.csv'
+    input_csv_path = 'your_file.csv'
+    output_csv_path = 'output_file.csv'
 
-    with open(csv_file_path, newline='', encoding='utf-8') as csvfile:
+    with open(input_csv_path, newline='', encoding='utf-8') as csvfile, open(output_csv_path, 'w', newline='', encoding='utf-8') as output_csv:
         reader = csv.DictReader(csvfile)
+        fieldnames = reader.fieldnames + ["verification_result"]  # Add a new field for the verification result
+        writer = csv.DictWriter(output_csv, fieldnames=fieldnames)
+        writer.writeheader()
+
         for row in reader:
             name = row['name']
             street1 = row['street1']
@@ -35,15 +66,12 @@ def main():
             # Verify address
             result = verify_address(name, street1, street2, city, state, zip_code, country)
 
-            # Process the result (you can customize this part based on your needs)
-            if result.verifications.delivery.success:
-                print(f"Address for {name} is valid!")
-            else:
-                print(f"Address for {name} is invalid. Details: {result.verifications.delivery.errors}")
+            # Process the result
+            processed_result = process_result(result)
 
-if __name__ == "__main__":
-    main()
-
+            # Write the row to the output CSV file
+            row["verification_result"] = json.dumps(processed_result)
+            writer.writerow(row)
 
 if __name__ == "__main__":
     main()
